@@ -45,7 +45,6 @@ router.post(
   "/signUpUser", async (req, res) => {
     try {
       const { name, email, schoolName, number, password } = req.body;
-
       const checkEmail = await Signup.findOne({ email })
       if (checkEmail) {
         return res.json({ message: "user already exists", user: checkEmail })
