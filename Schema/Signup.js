@@ -3,20 +3,20 @@ const { Schema } = mongoose;
 
 const SignupSchema = new Schema({
   name: {
-    type: String,
-    required: true,
+    type: String
   },
   email: {
     type: String,
     required: true,
   },
+  password: {
+    type: String
+  },
   number: {
-    type: String,
-    required: true,
+    type: String
   },
   schoolName: {
-    type: String,
-    required: true,
+    type: String
   }
 });
 

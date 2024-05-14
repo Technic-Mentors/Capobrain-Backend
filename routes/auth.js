@@ -5,13 +5,12 @@ const Admin = require("../Schema/Admin");
 const Signup = require("../Schema/Signup")
 const Post = require("../Schema/Post");
 const Category = require("../Schema/Category");
-const JWT_SECRET = "habibisagoodb#oy";
+const Support = require("../Schema/Support")
 const multer = require("multer");
 const bcrypt = require("bcrypt");
-
+const Message = require("../Schema/Message")
 // const app = express();
 const router = express.Router();
-const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 
 const storage = multer.diskStorage({
@@ -27,31 +26,76 @@ const upload = multer({ storage });
 
 let hardcodedUser = {
   email: "capobrain@gmail.com",
-  password: "$2a$10$UQoTsfaaoUYdx0Kzl51.QOU9E5dZsU5dE4yCk53UCfbCHTwl3OAGu",
+  password: "1234",
 };
+const createAdmin = async () => {
+  const hashPassword = await bcrypt.hash(hardcodedUser.password, 10)
+  const checkEmail = await Signup.findOne({ email: hardcodedUser.email })
+  if (checkEmail) {
+    return;
+  }
+  await Signup.create({
+    email: hardcodedUser.email,
+    password: hashPassword
+  })
+}
+createAdmin()
 // Route 1: signup user using: api/auth/signUpUser
 router.post(
   "/signUpUser", async (req, res) => {
     try {
-      const { name, email, schoolName, number } = req.body;
+      const { name, email, schoolName, number, password } = req.body;
 
       const checkEmail = await Signup.findOne({ email })
       if (checkEmail) {
-        return res.json({ message: "user already exists",user:checkEmail })
+        return res.json({ message: "user already exists", user: checkEmail })
+      }
+      let hashPassword;
+      if(password){
+        hashPassword = await bcrypt.hash(password, 10)
       }
       const user = await Signup.create({
         name,
         email,
         number,
-        schoolName
+        schoolName,
+        password: hashPassword
       });
-      res.json({ user:user });
+      res.json(user);
     } catch (error) {
       res.status(500).send("Internal error occured");
       console.log(error);
     }
   }
 );
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Check if the entered credentials match a user in the database
+    const user = await Signup.findOne({ email });
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid credentials" });
+    }
+
+    // Compare the entered password with the hashed password in the database
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordMatch) {
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid credentials" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Internal server error");
+  }
+});
 // get signUp Demo Users
 router.get("/getDemoUsers", async (req, res) => {
   try {
@@ -222,72 +266,6 @@ router.get("/getpost/:slug", async (req, res) => {
   }
 });
 // get post id end
-
-// Route 1: create user using: api/auth/createadmin
-router.post("/createadmin", async (req, res) => {
-  try {
-    const { email } = req.body
-    if (email !== hardcodedUser.email) {
-      return res
-        .status(400)
-        .json({ success: false, error: "invalid credentials" });
-    }
-    // Check if the user already exists
-    const existingUser = await Admin.findOne({ email: hardcodedUser.email });
-
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({ success: false, error: "User already exists" });
-    }
-
-    // Create a new user
-    const newUser = await Admin.create(hardcodedUser);
-
-    res.json({ success: true, user: newUser });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Internal server error");
-  }
-});
-
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    // Check if the entered credentials match a user in the database
-    const user = await Admin.findOne({ email });
-
-    if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, error: "Invalid credentials" });
-    }
-
-    // Compare the entered password with the hashed password in the database
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordMatch) {
-      return res
-        .status(401)
-        .json({ success: false, error: "Invalid credentials" });
-    }
-
-    // Generate a token
-    const token = jwt.sign(
-      { user: { email: user.email } },
-      "TechnicSecretKey",
-      {
-        expiresIn: "1h", // You can adjust the expiration time
-      }
-    );
-
-    res.json({ success: true, token });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Internal server error");
-  }
-});
 
 // Change Password
 router.put("/changepassword", async (req, res) => {
@@ -463,6 +441,102 @@ router.get("/categoryCount", async (req, res) => {
   } catch (error) {
     console.log(error.message);
     res.status(500).send("internal server error");
+  }
+})
+
+const randomId = () => {
+  const randomTicket = Math.floor(Math.random() * 10000)
+  return `TICKET-${randomTicket}`
+}
+
+router.post("/support", async (req, res) => {
+  try {
+    const { title, message, subject, severity, userId } = req.body
+    const ticketId = randomId()
+    const ticket = await Support.create({
+      title,
+      message,
+      subject,
+      severity,
+      ticketId,
+      userId,
+      status: "Pending"
+    })
+    res.json({ message: "ticketGenerated", ticket })
+  } catch (error) {
+    console.log(error)
+    res.status(500).send("internal server error occured")
+  }
+})
+router.get("/tickets", async (req, res) => {
+  try {
+    const tickets = await Support.find().populate("userId", "email name")
+    res.json(tickets)
+  } catch (error) {
+    console.log(error)
+    res.status(500).send("internal server error occured")
+  }
+})
+router.get("/getTicket/:id", async (req, res) => {
+  try {
+    const ticket = await Support.findById(req.params.id).populate("userId", "email name")
+    if (!ticket) {
+      return res.status(400).json({ message: "not found any ticket against this id" })
+    }
+    res.json(ticket)
+  } catch (error) {
+    console.log(error)
+    res.status(500).send("internal server error occured")
+  }
+})
+router.put("/updateTicket/:id", async (req, res) => {
+  try {
+    const { status } = req.body
+    const ticket = await Support.findByIdAndUpdate(req.params.id, { status }, { new: true })
+    if (!ticket) {
+      return res.status(400).json({ message: "not found any ticket against this id" })
+    }
+    res.json(ticket)
+  } catch (error) {
+    console.log(error)
+    res.status(500).send("internal server error occured")
+  }
+})
+router.delete("/delTicket/:id", async (req, res) => {
+  try {
+    const ticket = await Support.findByIdAndDelete(req.params.id)
+    if (!ticket) {
+      return res.status(400).json({ message: "not found any ticket against this id" })
+    }
+    res.json(ticket)
+  } catch (error) {
+    console.log(error)
+    res.status(500).send("internal server error occured")
+  }
+})
+
+// message apis
+router.post("/createMessage", async (req, res) => {
+  try {
+    const { message, userId, ticketId } = req.body
+    const createMessage = await Message.create({
+      message,
+      userId,
+      ticketId
+    })
+    res.json(createMessage)
+  } catch (error) {
+    console.log(error)
+    return res.status(500).send("internal server error")
+  }
+})
+router.get("/messages", async (req, res) => {
+  try {
+    const message = await Message.find().populate("userId", "email name").populate("ticketId", "ticketId")
+    res.json(message)
+  } catch (error) {
+    console.log(error)
+    return res.status(500).send("internal server error")
   }
 })
 module.exports = router;
