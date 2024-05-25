@@ -531,7 +531,7 @@ router.post("/createMessage", async (req, res) => {
 })
 router.get("/messages", async (req, res) => {
   try {
-    const message = await Message.find().populate("userId", "email name").populate("ticketId", "ticketId")
+    const message = await Message.find().populate("userId", "email name").populate("ticketId", "ticketId subject")
     res.json(message)
   } catch (error) {
     console.log(error)
