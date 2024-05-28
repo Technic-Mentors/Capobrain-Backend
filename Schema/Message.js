@@ -3,8 +3,7 @@ const { Schema } = mongoose
 
 const messageSchema = new Schema({
     message: {
-        type: String,
-        // required: true
+        type: String
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -14,9 +13,15 @@ const messageSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Support"
     },
-    createAt:{
+    status: {
+        type: String
+    },
+    messageStatus: {
+        type: String
+    },
+    createAt: {
         type: Date,
-        default: Date.now()
+        default: Date.now
     }
 })
 module.exports = mongoose.model("Message", messageSchema)

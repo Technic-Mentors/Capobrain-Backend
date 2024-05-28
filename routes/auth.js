@@ -50,7 +50,7 @@ router.post(
         return res.json({ message: "user already exists", user: checkEmail })
       }
       let hashPassword;
-      if(password){
+      if (password) {
         hashPassword = await bcrypt.hash(password, 10)
       }
       const user = await Signup.create({
@@ -459,7 +459,7 @@ router.post("/support", async (req, res) => {
       severity,
       ticketId,
       userId,
-      status: "Pending"
+      status: "Open"
     })
     res.json({ message: "ticketGenerated", ticket })
   } catch (error) {
@@ -517,11 +517,12 @@ router.delete("/delTicket/:id", async (req, res) => {
 // message apis
 router.post("/createMessage", async (req, res) => {
   try {
-    const { message, userId, ticketId } = req.body
+    const { message, userId, ticketId, messageStatus } = req.body
     const createMessage = await Message.create({
       message,
       userId,
-      ticketId
+      ticketId,
+      messageStatus,
     })
     res.json(createMessage)
   } catch (error) {
