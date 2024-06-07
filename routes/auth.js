@@ -543,6 +543,8 @@ router.get("/messages", async (req, res) => {
 // Function to update ticket status to "Close" if the last message is older than 5 hours
 const updateTicketStatus = async () => {
   try {
+    console.log(new Date().toLocaleString(), new Date().getTimezoneOffset());
+
     const now = new Date()
     const fiveHoursAgo = new Date(now.getTime() - 5 * 60 * 1000)
 
@@ -560,46 +562,5 @@ const updateTicketStatus = async () => {
 
 // Schedule the function to run every hour
 cron.schedule("*/1 * * * *", updateTicketStatus)
-// // Schedule the cron job to run every minute
-// cron.schedule('*/1 * * * *', async () => {
-//   console.log('Cron job started to update ticket status');
-
-//   // Calculate the timestamp for 2 hours ago
-//   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-//   console.log('Timestamp two hours ago:', twoHoursAgo.toISOString());
-
-//   try {
-//     // Find distinct ticket IDs with messages older than 2 hours
-//     const ticketIdsToClose = await Message.distinct('ticketId', {
-//       createAt: { $lt: twoHoursAgo }
-//     });
-
-//     console.log('Ticket IDs to close:', ticketIdsToClose);
-
-//     if (ticketIdsToClose.length > 0) {
-//       // Find open tickets with the IDs
-//       const ticketsToUpdate = await Support.find({
-//         _id: { $in: ticketIdsToClose },
-//         status: 'Open'
-//       });
-
-//       console.log('Tickets to update:', ticketsToUpdate.length);
-
-//       // Update all matching tickets
-//       for (let ticket of ticketsToUpdate) {
-//         ticket.status = 'Close';
-//         await ticket.save();
-//         console.log(`Ticket ${ticket._id} has been closed.`);
-//       }
-//     } else {
-//       console.log('No tickets to update.');
-//     }
-//   } catch (error) {
-//     console.error('Error updating tickets:', error);
-//   }
-
-//   console.log('Cron job finished');
-// });
-
 
 module.exports = router;
