@@ -10,6 +10,7 @@ const multer = require("multer");
 const bcrypt = require("bcrypt");
 const Message = require("../Schema/Message")
 const cron = require('node-cron');
+const moment = require('moment-timezone');
 // const app = express();
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
@@ -543,22 +544,42 @@ router.get("/messages", async (req, res) => {
 // Function to update ticket status to "Close" if the last message is older than 5 hours
 const updateTicketStatus = async () => {
   try {
-    console.log(new Date().toLocaleString(), new Date().getTimezoneOffset());
+    // Get the current time in UTC
+    const now = moment.utc();
 
-    const now = new Date()
-    const fiveHoursAgo = new Date(now.getTime() - 5 * 60 * 1000)
+    // Log the current time
+    console.log('Current UTC Time:', now.format());
 
-    const tickets = await Support.find({ status: "Open" })
+    // Convert the current time to GMT+5 time zone
+    const nowGMT5 = now.clone().tz('Asia/Karachi'); // Adjust 'Asia/Karachi' to your desired time zone
+
+    // Log the current time in GMT+5
+    console.log('Current GMT+5 Time:', nowGMT5.format());
+
+    // Calculate 5 minutes ago in GMT+5 time zone
+    const fiveMinutesAgoGMT5 = nowGMT5.clone().subtract(5, 'minutes');
+
+    // Log the time 5 minutes ago in GMT+5
+    console.log('Five Minutes Ago GMT+5 Time:', fiveMinutesAgoGMT5.format());
+
+    // Find open tickets
+    const tickets = await Support.find({ status: "Open" });
+
+    // Loop through each ticket
     for (const ticket of tickets) {
-      const lastMessage = await Message.findOne({ ticketId: ticket._id }).sort({ createAt: -1 })
-      if (lastMessage && lastMessage.createAt < fiveHoursAgo) {
-        await Support.updateOne({ _id: ticket._id }, { status: "Close" })
+      // Find the latest message for the ticket
+      const lastMessage = await Message.findOne({ ticketId: ticket._id }).sort({ createAt: -1 });
+
+      // Check if the last message exists and is older than 5 minutes ago in GMT+5
+      if (lastMessage && moment.utc(lastMessage.createAt).tz('Asia/Karachi').isBefore(fiveMinutesAgoGMT5)) {
+        // Update the ticket status to "Close"
+        await Support.updateOne({ _id: ticket._id }, { status: "Close" });
       }
     }
   } catch (error) {
-    console.log("Error updating ticket status:", error)
+    console.error("Error updating ticket status:", error);
   }
-}
+};
 
 // Schedule the function to run every hour
 cron.schedule("*/1 * * * *", updateTicketStatus)
