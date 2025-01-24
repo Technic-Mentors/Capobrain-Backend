@@ -24,6 +24,7 @@ const postSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "admin"
   },
+  image: String,
   date: {
     type: Date,
     default: Date.now,

@@ -6,24 +6,13 @@ const Signup = require("../Schema/Signup")
 const Post = require("../Schema/Post");
 const Category = require("../Schema/Category");
 const Support = require("../Schema/Support")
-const multer = require("multer");
 const bcrypt = require("bcrypt");
 const Message = require("../Schema/Message")
 const cron = require('node-cron');
-// const app = express();
+const upload = require("../MiddleWare/ImgFilter")
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Specify the directory where uploaded files will be stored
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  },
-});
-
-const upload = multer({ storage });
+const cloudinaryV2 = require("../Cloudinary");
 
 let hardcodedUser = {
   email: "capobrain@gmail.com",
@@ -41,7 +30,7 @@ const createAdmin = async () => {
   })
 }
 createAdmin()
-// Route 1: signup user using: api/auth/signUpUser
+
 router.post(
   "/signUpUser", async (req, res) => {
     try {
@@ -72,7 +61,6 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Check if the entered credentials match a user in the database
     const user = await Signup.findOne({ email });
 
     if (!user) {
@@ -81,7 +69,6 @@ router.post("/login", async (req, res) => {
         .json({ success: false, error: "Invalid credentials" });
     }
 
-    // Compare the entered password with the hashed password in the database
     const isPasswordMatch = await bcrypt.compare(password, user.password);
 
     if (!isPasswordMatch) {
@@ -96,7 +83,7 @@ router.post("/login", async (req, res) => {
     res.status(500).send("Internal server error");
   }
 });
-// get signUp Demo Users
+
 router.get("/getDemoUsers", async (req, res) => {
   try {
     const allusers = await Signup.find({});
@@ -107,7 +94,6 @@ router.get("/getDemoUsers", async (req, res) => {
   }
 });
 
-// Route 1: create user using: api/auth/createuser
 router.post(
   "/createuser", async (req, res) => {
     const errors = validationResult(req);
@@ -215,12 +201,18 @@ router.post(
     }
     try {
       const { title, content, category, slug } = req.body;
+      let img_url;
+      if (req.file) {
+        const upload = await cloudinaryV2.uploader.upload(req.file.path);
+        img_url = upload.secure_url;
+      }
 
       const post = await Post.create({
         title,
         content,
         category,
         slug,
+        image: img_url
       });
 
       res.json({ post });
