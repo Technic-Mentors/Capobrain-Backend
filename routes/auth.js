@@ -315,7 +315,7 @@ router.delete("/delposts/:id", async (req, res) => {
   }
 });
 
-router.put("/editposts/:id", async (req, res) => {
+router.put("/editposts/:id", upload.single("image"), async (req, res) => {
   try {
     const { title, category, content, slug } = req.body;
     const newPosts = {};
@@ -325,12 +325,16 @@ router.put("/editposts/:id", async (req, res) => {
     if (category) {
       newPosts.category = category;
     }
-    
+
     if (content) {
       newPosts.content = content;
     }
     if (slug) {
       newPosts.slug = slug;
+    }
+    if (req.file) {
+      const upload = await cloudinaryV2.uploader.upload(req.file.path);
+      newPosts.image = upload.secure_url;
     }
 
     let posts = Post.findById(req.params.id);
