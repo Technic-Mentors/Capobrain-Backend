@@ -325,6 +325,7 @@ router.put("/editposts/:id", async (req, res) => {
     if (category) {
       newPosts.category = category;
     }
+    
     if (content) {
       newPosts.content = content;
     }
